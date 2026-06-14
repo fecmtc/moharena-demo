@@ -1,0 +1,379 @@
+menu "moh_arena_demo_review" 464 292 FROM_TOP 0.2
+virtualres 1
+align centerx centery
+fgcolor 1.00 1.00 1.00 1.00
+bgcolor 0.00 0.00 0.00 0.00
+
+resource
+Label
+{
+name "background"
+textalign centerx
+rect 0 0 464 292
+font verdana-12
+fgcolor 0.96 0.67 0.09 1.00
+bgcolor 0.00 0.00 0.00 0.85
+borderstyle "NONE"
+}
+
+resource
+Label
+{
+name "header"
+textalign centerx
+rect 0 0 464 32
+font verdana-12
+fgcolor 0.96 0.67 0.09 1.00
+bgcolor 0.07 0.07 0.08 0.85
+borderstyle "NONE"
+}
+
+resource
+Label
+{
+name "title"
+title "MoH Arena Demo Review"
+textalign centerx
+rect 0 7 464 18
+font verdana-14
+fgcolor 0.96 0.67 0.09 1.00
+bgcolor 0.00 0.00 0.00 0.00
+borderstyle "NONE"
+}
+
+resource
+Label
+{
+name "accent"
+textalign centerx
+rect 0 31 464 2
+font verdana-12
+fgcolor 0.96 0.67 0.09 1.00
+bgcolor 0.96 0.67 0.09 1.00
+borderstyle "NONE"
+}
+
+resource
+Label
+{
+name "playback_label"
+title "PLAYBACK"
+textalign centerx
+rect 16 40 432 16
+font verdana-12
+fgcolor 0.96 0.67 0.09 1.00
+bgcolor 0.00 0.00 0.00 0.00
+borderstyle "NONE"
+}
+
+resource
+Button
+{
+name "pause"
+title "Pause"
+textalign centerx
+rect 16 60 138 22
+font verdana-12
+stuffcommand "set timescale 0.0001; set cl_freezeDemo 1"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "play"
+title "Play"
+textalign centerx
+rect 163 60 138 22
+font verdana-12
+stuffcommand "set timescale 1; set cl_freezeDemo 0"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "restart"
+title "Restart"
+textalign centerx
+rect 310 60 138 22
+font verdana-12
+stuffcommand "demo review"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Label
+{
+name "speed_label"
+title "SPEED"
+textalign centerx
+rect 16 92 432 16
+font verdana-12
+fgcolor 0.96 0.67 0.09 1.00
+bgcolor 0.00 0.00 0.00 0.00
+borderstyle "NONE"
+}
+
+resource
+Button
+{
+name "speed01"
+title "0.1x"
+textalign centerx
+rect 16 112 102 22
+font verdana-12
+stuffcommand "set timescale 0.1; set cl_freezeDemo 0"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "speed025"
+title "0.25x"
+textalign centerx
+rect 126 112 102 22
+font verdana-12
+stuffcommand "set timescale 0.25; set cl_freezeDemo 0"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "speed05"
+title "0.5x"
+textalign centerx
+rect 236 112 102 22
+font verdana-12
+stuffcommand "set timescale 0.5; set cl_freezeDemo 0"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "speed1"
+title "1x"
+textalign centerx
+rect 346 112 102 22
+font verdana-12
+stuffcommand "set timescale 1; set cl_freezeDemo 0"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "speed2"
+title "2x"
+textalign centerx
+rect 16 138 102 22
+font verdana-12
+stuffcommand "set timescale 2; set cl_freezeDemo 0"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "speed4"
+title "4x"
+textalign centerx
+rect 126 138 102 22
+font verdana-12
+stuffcommand "set timescale 4; set cl_freezeDemo 0"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "speed8"
+title "8x"
+textalign centerx
+rect 236 138 102 22
+font verdana-12
+stuffcommand "set timescale 8; set cl_freezeDemo 0"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "speed16"
+title "16x"
+textalign centerx
+rect 346 138 102 22
+font verdana-12
+stuffcommand "set timescale 16; set cl_freezeDemo 0"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "speed64"
+title "64x Seek"
+textalign centerx
+rect 16 164 432 22
+font verdana-12
+stuffcommand "set timescale 64; set cl_freezeDemo 0"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Label
+{
+name "view_label"
+title "VIEW"
+textalign centerx
+rect 16 196 432 16
+font verdana-12
+fgcolor 0.96 0.67 0.09 1.00
+bgcolor 0.00 0.00 0.00 0.00
+borderstyle "NONE"
+}
+
+resource
+Button
+{
+name "third_toggle"
+title "3rd Person"
+textalign centerx
+rect 16 216 80 22
+font verdana-12
+stuffcommand "toggle cg_3rd_person"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "scores_show"
+title "Scores +"
+textalign centerx
+rect 104 216 80 22
+font verdana-12
+stuffcommand "togglemenu moh_arena_demo_review; +scores"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "scores_hide"
+title "Scores -"
+textalign centerx
+rect 192 216 80 22
+font verdana-12
+stuffcommand "-scores"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "hud_on"
+title "HUD On"
+textalign centerx
+rect 280 216 80 22
+font verdana-12
+stuffcommand "ui_addhud moh_arena_demo_hud_ui"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "hud_off"
+title "HUD Off"
+textalign centerx
+rect 368 216 80 22
+font verdana-12
+stuffcommand "ui_removehud moh_arena_demo_hud_ui"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "close_menu"
+title "Close"
+textalign centerx
+rect 16 248 211 22
+font verdana-12
+stuffcommand "togglemenu moh_arena_demo_review"
+borderstyle "3D_BORDER"
+bgcolor 0.13 0.13 0.15 0.92
+fgcolor 0.92 0.92 0.92 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+
+resource
+Button
+{
+name "quit"
+title "Quit"
+textalign centerx
+rect 236 248 211 22
+font verdana-12
+stuffcommand "quit"
+borderstyle "3D_BORDER"
+bgcolor 0.34 0.09 0.09 0.92
+fgcolor 1.00 0.86 0.86 1.00
+clicksound "sound/mechanics/hit_notify.wav"
+}
+

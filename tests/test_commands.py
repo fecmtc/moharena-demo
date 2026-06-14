@@ -12,6 +12,7 @@ def test_command_strings_use_canonical_cvars() -> None:
     assert commands.set_third_person_command(False) == "set cg_3rd_person 0"
     assert commands.show_scores_command() == "+scores"
     assert commands.hide_scores_command() == "-scores"
+    assert commands.toggle_scores_command() == "+scores"
     assert commands.restart_demo_command() == "demo review"
     assert commands.screenshot_command() == "screenshot"
     assert commands.start_video_command("clip 1") == "video clip_1"

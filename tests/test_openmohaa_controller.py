@@ -30,6 +30,9 @@ def test_build_openmohaa_argv_preserves_paths_with_spaces() -> None:
     assert argv[argv.index("r_mode") + 1] == "-1"
     assert argv[argv.index("cheats") + 1] == "1"
     assert argv[argv.index("sv_cheats") + 1] == "1"
+    assert argv[argv.index("logfile") + 1] == "2"
+    assert argv[argv.index("logfile_timestamps") + 1] == "1"
+    assert argv[argv.index("fps") + 1] == "0"
     assert "cl_freezeDemo" in argv
     assert "moh_arena_pipe" in argv
 
@@ -38,6 +41,24 @@ def test_build_openmohaa_argv_accepts_specific_r_mode() -> None:
     argv = build_openmohaa_argv("openmohaa", "/games/mohaa", "/tmp/review", r_mode=4)
 
     assert argv[argv.index("r_mode") + 1] == "4"
+
+
+def test_build_openmohaa_argv_omits_xray_cvars_by_default() -> None:
+    argv = build_openmohaa_argv("openmohaa", "/games/mohaa", "/tmp/review")
+
+    assert "cg_forceModel" not in argv
+    assert "dm_playermodel" not in argv
+
+
+def test_build_openmohaa_argv_injects_xray_cvars_before_exec() -> None:
+    argv = build_openmohaa_argv("openmohaa", "/games/mohaa", "/tmp/review", xray_enabled=True)
+
+    assert argv[argv.index("cg_forceModel") + 1] == "0"
+    assert argv[argv.index("dm_playermodel") + 1] == "american_army"
+    assert argv[argv.index("dm_playergermanmodel") + 1] == "german_wehrmacht_soldier"
+    # x-ray sets come before the trailing exec/demo tail
+    assert argv.index("dm_playergermanmodel") < argv.index("+exec")
+    assert argv[-4:] == ["+exec", "moh_arena_demo_review.cfg", "+demo", "review"]
 
 
 def test_infer_basepath_from_executable_uses_executable_parent() -> None:
@@ -67,6 +88,8 @@ def test_cleanup_xray_pk3_removes_copied_file(tmp_path) -> None:
         config_path=tmp_path / "main" / "moh_arena_demo_review.cfg",
         autoexec_path=tmp_path / "main" / "autoexec.cfg",
         menu_path=tmp_path / "main" / "ui" / "moh_arena_demo_review.urc",
+        hud_ui_path=tmp_path / "main" / "ui" / "moh_arena_demo_hud_ui.urc",
+        qconsole_log_path=tmp_path / "main" / "qconsole.log",
         pipe_path=tmp_path / "main" / "moh_arena_pipe",
         screenshots_dir=tmp_path / "main" / "screenshots",
         videos_dir=tmp_path / "main" / "videos",
@@ -77,6 +100,54 @@ def test_cleanup_xray_pk3_removes_copied_file(tmp_path) -> None:
     controller.cleanup_xray_pk3()
 
     assert not xray.exists()
+
+
+def test_python_qconsole_tee_writes_to_prepared_homepath(tmp_path) -> None:
+    controller = OpenMohaaController()
+    controller.prepared = PreparedHomepath(
+        homepath=tmp_path,
+        main_dir=tmp_path / "main",
+        demos_dir=tmp_path / "main" / "demos",
+        demo_path=tmp_path / "main" / "demos" / "review.dm_8",
+        config_path=tmp_path / "main" / "moh_arena_demo_review.cfg",
+        autoexec_path=tmp_path / "main" / "autoexec.cfg",
+        menu_path=tmp_path / "main" / "ui" / "moh_arena_demo_review.urc",
+        hud_ui_path=tmp_path / "main" / "ui" / "moh_arena_demo_hud_ui.urc",
+        qconsole_log_path=tmp_path / "main" / "qconsole.log",
+        pipe_path=tmp_path / "main" / "moh_arena_pipe",
+        screenshots_dir=tmp_path / "main" / "screenshots",
+        videos_dir=tmp_path / "main" / "videos",
+    )
+
+    controller._append_qconsole("hello qconsole")  # noqa: SLF001 - verifies the tee helper directly
+
+    assert (tmp_path / "main" / "qconsole.log").read_text(encoding="utf-8") == "hello qconsole\n"
+
+
+def test_remove_stale_xray_pk3_deletes_known_artifact_from_basepath(tmp_path) -> None:
+    from moh_arena_demo_reviewer.paths import default_xray_pk3_path
+
+    basepath = tmp_path / "OpenMoHAA"
+    main_dir = basepath / "main"
+    main_dir.mkdir(parents=True)
+    stale = main_dir / default_xray_pk3_path().name
+    stale.write_bytes(b"pk3")
+    unrelated = main_dir / "some_other.pk3"
+    unrelated.write_bytes(b"keep")
+
+    controller = OpenMohaaController()
+    controller._remove_stale_xray_pk3(basepath)  # noqa: SLF001 - exercises the helper directly
+
+    assert not stale.exists()
+    assert unrelated.exists()
+
+
+def test_remove_stale_xray_pk3_noop_when_absent(tmp_path) -> None:
+    basepath = tmp_path / "OpenMoHAA"
+    (basepath / "main").mkdir(parents=True)
+
+    controller = OpenMohaaController()
+    controller._remove_stale_xray_pk3(basepath)  # noqa: SLF001 - must not raise when nothing to remove
 
 
 def test_video_output_dir_uses_basepath_main_videos(tmp_path) -> None:

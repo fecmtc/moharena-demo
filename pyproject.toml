@@ -22,6 +22,9 @@ dev = [
 where = ["."]
 include = ["moh_arena_demo_reviewer*"]
 
+[tool.setuptools.package-data]
+moh_arena_demo_reviewer = ["game_files/*.cfg", "game_files/ui/*.urc"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

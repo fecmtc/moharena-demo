@@ -49,6 +49,10 @@ def hide_scores_command() -> str:
     return "-scores"
 
 
+def toggle_scores_command() -> str:
+    return "+scores"
+
+
 def restart_demo_command(demo_name: str = DEMO_COMMAND_NAME) -> str:
     return f"demo {demo_name}"
 

@@ -24,6 +24,12 @@ def test_prepare_homepath_copies_demo_as_review_dm8(tmp_path) -> None:
     assert prepared.config_path.exists()
     assert prepared.autoexec_path.exists()
     assert prepared.menu_path.exists()
+    assert prepared.hud_ui_path == prepared.homepath / "main" / "ui" / "moh_arena_demo_hud_ui.urc"
+    assert prepared.hud_ui_path.exists()
+    assert not (prepared.homepath / "main" / "global").exists()
+    assert prepared.qconsole_log_path == prepared.homepath / "main" / "qconsole.log"
+    assert prepared.qconsole_log_path.exists()
+    assert prepared.qconsole_log_path.read_text(encoding="utf-8") == ""
     assert prepared.screenshots_dir.exists()
     assert prepared.videos_dir.exists()
 

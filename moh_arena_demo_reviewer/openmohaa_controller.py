@@ -26,9 +26,11 @@ from .commands import (
     show_scores_command,
     start_video_command,
     stop_video_command,
+    toggle_scores_command,
     toggle_third_person_command,
 )
-from .paths import PreparedHomepath, find_pipe, prepare_homepath
+from .hud import hide_hud_command, hud_update_command, show_hud_command
+from .paths import PreparedHomepath, default_xray_pk3_path, find_pipe, prepare_homepath
 
 LogCallback = Callable[[str], None]
 
@@ -149,6 +151,13 @@ def _bounds_from_quartz_windows(
     return best
 
 
+XRAY_CVARS = (
+    ("cg_forceModel", "0"),
+    ("dm_playermodel", "american_army"),
+    ("dm_playergermanmodel", "german_wehrmacht_soldier"),
+)
+
+
 def build_openmohaa_argv(
     executable_path: Path | str,
     basepath: Path | str,
@@ -157,8 +166,9 @@ def build_openmohaa_argv(
     height: int = 720,
     r_mode: int = -1,
     pipe_name: str = PIPE_NAME,
+    xray_enabled: bool = False,
 ) -> list[str]:
-    return [
+    argv = [
         str(executable_path),
         "+set",
         "fs_basepath",
@@ -194,7 +204,16 @@ def build_openmohaa_argv(
         "sv_cheats",
         "1",
         "+set",
+        "logfile",
+        "2",
+        "+set",
+        "logfile_timestamps",
+        "1",
+        "+set",
         "timedemo",
+        "0",
+        "+set",
+        "fps",
         "0",
         "+set",
         "timescale",
@@ -202,11 +221,12 @@ def build_openmohaa_argv(
         "+set",
         "cl_freezeDemo",
         "0",
-        "+exec",
-        CONFIG_NAME,
-        "+demo",
-        DEMO_COMMAND_NAME,
     ]
+    if xray_enabled:
+        for cvar, value in XRAY_CVARS:
+            argv += ["+set", cvar, value]
+    argv += ["+exec", CONFIG_NAME, "+demo", DEMO_COMMAND_NAME]
+    return argv
 
 
 class OpenMohaaController:
@@ -240,8 +260,12 @@ class OpenMohaaController:
         if not basepath.exists():
             raise FileNotFoundError(f"Inferred MOHAA basepath does not exist: {basepath}")
 
+        if not config.xray_enabled:
+            self._remove_stale_xray_pk3(basepath)
+
         self.prepared = prepare_homepath(config.demo_path, config.temp_dir, xray_enabled=config.xray_enabled)
         self._xray_cleaned = False
+        self._append_qconsole("MoH Arena Python qconsole tee started.")
         self.argv = build_openmohaa_argv(
             executable,
             basepath,
@@ -249,8 +273,10 @@ class OpenMohaaController:
             r_mode=config.r_mode,
             width=config.width,
             height=config.height,
+            xray_enabled=config.xray_enabled,
         )
         self._log(f"Inferred fs_basepath: {basepath}")
+        self._log(f"Client qconsole log: {self.prepared.qconsole_log_path}")
         if self.prepared.xray_pk3_path:
             self._log(f"X-ray pk3 enabled: {self.prepared.xray_pk3_path}")
         self._log(f"Launching: {subprocess.list2cmdline(self.argv)}")
@@ -267,6 +293,7 @@ class OpenMohaaController:
             process=self.process,
         )
         self._log(f"Pipe ready: {self.pipe_path}")
+        self.send_command('logfile 2; logfile_timestamps 1; echo "MoH Arena qconsole active"')
         return self.prepared
 
     def video_output_dir(self) -> Path:
@@ -294,6 +321,7 @@ class OpenMohaaController:
                     break
                 clean_line = strip_terminal_controls(line.rstrip("\n"))
                 if clean_line:
+                    self._append_qconsole(clean_line)
                     lines.append(clean_line)
         except (OSError, ValueError):
             return lines
@@ -321,6 +349,20 @@ class OpenMohaaController:
         self.process = None
         self.pipe_path = None
 
+    def _remove_stale_xray_pk3(self, basepath: Path) -> None:
+        # Launching without x-ray: drop any leftover x-ray pk3 from the game's
+        # basepath/main so chams from a previous session do not keep loading.
+        # Each review uses a fresh temp homepath (no pk3), so a persistent copy
+        # can only live in the real install; remove just our known artifact.
+        stale = basepath / GAME_DIR / default_xray_pk3_path().name
+        if not stale.is_file():
+            return
+        try:
+            stale.unlink()
+            self._log(f"Removed stale x-ray pk3 from basepath: {stale}")
+        except OSError as exc:
+            self._log(f"Could not remove stale x-ray pk3 {stale}: {exc}")
+
     def cleanup_xray_pk3(self) -> None:
         if self._xray_cleaned or not self.prepared or not self.prepared.xray_pk3_path:
             return
@@ -331,6 +373,16 @@ class OpenMohaaController:
             self._log(f"Could not remove x-ray pk3: {exc}")
         finally:
             self._xray_cleaned = True
+
+    def _append_qconsole(self, line: str) -> None:
+        if not self.prepared:
+            return
+        try:
+            self.prepared.qconsole_log_path.parent.mkdir(parents=True, exist_ok=True)
+            with self.prepared.qconsole_log_path.open("a", encoding="utf-8") as handle:
+                handle.write(line.rstrip("\r\n") + "\n")
+        except OSError as exc:
+            self._log(f"Could not write Python qconsole tee: {exc}")
 
     def send_command(self, command: str) -> None:
         if not self.is_running:
@@ -347,6 +399,7 @@ class OpenMohaaController:
         finally:
             os.close(fd)
         self._log(f"> {command}")
+        self._append_qconsole(f"> {command}")
 
     def play(self, speed: float = 1.0) -> None:
         self.send_command(play_command(speed))
@@ -369,6 +422,9 @@ class OpenMohaaController:
     def hide_scores(self) -> None:
         self.send_command(hide_scores_command())
 
+    def toggle_scores(self) -> None:
+        self.send_command(toggle_scores_command())
+
     def restart_demo(self) -> None:
         self.send_command(restart_demo_command())
 
@@ -383,6 +439,12 @@ class OpenMohaaController:
 
     def quit(self) -> None:
         self.send_command(quit_command())
+
+    def set_hud_enabled(self, enabled: bool) -> None:
+        self.send_command(show_hud_command() if enabled else hide_hud_command())
+
+    def update_hud(self, line1: str, line2: str = "", line3: str = "") -> None:
+        self.send_command(hud_update_command(line1, line2, line3))
 
     def move_window(self, x: int, y: int, width: int | None = None, height: int | None = None) -> tuple[int, int, int, int] | None:
         if not self.process or platform.system() != "Darwin":

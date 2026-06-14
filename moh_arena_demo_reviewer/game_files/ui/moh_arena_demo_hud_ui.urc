@@ -1,0 +1,59 @@
+menu "moh_arena_demo_hud_ui" 364 60 NONE 0.0
+virtualres 1
+align centerx bottom
+fgcolor 1.00 1.00 1.00 1.00
+bgcolor 0.00 0.00 0.00 0.00
+
+resource
+Label
+{
+name "moh_arena_hud_bg"
+textalign centerx
+rect 24 0 316 54
+font verdana-12
+fgcolor 0.96 0.67 0.09 1.00
+bgcolor 0.00 0.00 0.00 0.55
+borderstyle "NONE"
+}
+
+resource
+Label
+{
+name "moh_arena_hud_ui_line1"
+title ""
+linkcvar "moh_arena_hud_line1"
+textalign centerx
+rect 0 4 364 15
+font verdana-12
+fgcolor 0.96 0.85 0.45 1.00
+bgcolor 0.00 0.00 0.00 0.00
+borderstyle "NONE"
+}
+
+resource
+Label
+{
+name "moh_arena_hud_ui_line2"
+title ""
+linkcvar "moh_arena_hud_line2"
+textalign centerx
+rect 0 21 364 15
+font verdana-12
+fgcolor 0.90 0.90 0.90 1.00
+bgcolor 0.00 0.00 0.00 0.00
+borderstyle "NONE"
+}
+
+resource
+Label
+{
+name "moh_arena_hud_ui_line3"
+title ""
+linkcvar "moh_arena_hud_line3"
+textalign centerx
+rect 0 38 364 15
+font verdana-12
+fgcolor 0.55 0.85 1.00 1.00
+bgcolor 0.00 0.00 0.00 0.00
+borderstyle "NONE"
+}

@@ -46,6 +46,8 @@ class PreparedHomepath:
     config_path: Path
     autoexec_path: Path
     menu_path: Path
+    hud_ui_path: Path
+    qconsole_log_path: Path
     pipe_path: Path
     screenshots_dir: Path
     videos_dir: Path
@@ -87,7 +89,9 @@ def prepare_homepath(
     demo_path = demos_dir / DEMO_NAME
     shutil.copy2(source_demo, demo_path)
 
-    config_path, autoexec_path, menu_path = write_review_files(main_dir, xray_enabled=xray_enabled)
+    config_path, autoexec_path, menu_path, hud_ui_path = write_review_files(main_dir)
+    qconsole_log_path = main_dir / "qconsole.log"
+    qconsole_log_path.write_text("", encoding="utf-8")
     xray_pk3_path = None
     if xray_enabled:
         source_pk3 = Path(xray_source).expanduser() if xray_source else default_xray_pk3_path()
@@ -104,6 +108,8 @@ def prepare_homepath(
         config_path=config_path,
         autoexec_path=autoexec_path,
         menu_path=menu_path,
+        hud_ui_path=hud_ui_path,
+        qconsole_log_path=qconsole_log_path,
         pipe_path=expected_pipe_path(homepath),
         screenshots_dir=screenshots_dir,
         videos_dir=videos_dir,

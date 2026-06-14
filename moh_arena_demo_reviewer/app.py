@@ -9,8 +9,8 @@ import time
 import traceback
 from pathlib import Path
 
-from PySide6.QtCore import QPoint, QRect, QSettings, QThread, QTimer, Qt, Signal
-from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtCore import QPoint, QRect, QSettings, QThread, QTimer, Qt, QUrl, Signal
+from PySide6.QtGui import QColor, QDesktopServices, QPainter, QPen
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -231,12 +231,16 @@ class MainWindow(QMainWindow):
         self.third_button.setCheckable(True)
         self.scores_button = QPushButton("Scores")
         self.scores_button.setCheckable(True)
+        self.hud_button = QPushButton("HUD")
+        self.hud_button.setCheckable(True)
+        self.hud_button.setToolTip("Toggle the in-game status overlay (time, speed, 3rd-person, x-ray, recording).")
         self.restart_button = QPushButton("Restart")
         self.stop_button = QPushButton("Stop")
         self.screenshot_button = QPushButton("Take screenshot")
         self.select_region_button = QPushButton("Select Region")
         self.start_video_button = QPushButton("Start Rec")
         self.stop_video_button = QPushButton("Stop Rec")
+        self.qconsole_button = QPushButton("Qconsole")
         self.video_name_edit = QLineEdit("moh_arena_clip")
         self.video_status_label = QLabel("Rec: idle")
         self.video_status_label.setWordWrap(False)
@@ -258,8 +262,13 @@ class MainWindow(QMainWindow):
         self._demo_clock_active = False
         self._demo_clock_mark = time.monotonic()
         self._seek_generation = 0
+        self._hud_enabled = False
+        self._hud_status_line = ""
+        self._last_hud_push = 0.0
+        self._hud_error_logged = False
         self._arrange_attempts = 0
         self._recording_path: Path | None = None
+        self._qconsole_log_path: Path | None = None
         self._recording_started_at: float | None = None
         self._recording_pending = False
         self._capture_bounds: tuple[int, int, int, int] | None = None
@@ -331,6 +340,7 @@ class MainWindow(QMainWindow):
             self.stop_button,
             self.third_button,
             self.scores_button,
+            self.hud_button,
             self.screenshot_button,
         ]
         for button in primary_buttons:
@@ -376,6 +386,7 @@ class MainWindow(QMainWindow):
         video_row.addWidget(self.select_region_button)
         video_row.addWidget(self.start_video_button)
         video_row.addWidget(self.stop_video_button)
+        video_row.addWidget(self.qconsole_button)
         video_row.addWidget(self.video_status_label)
         video_row.addStretch(1)
         controls.addLayout(video_row)
@@ -401,6 +412,7 @@ class MainWindow(QMainWindow):
         self.play_pause_button.toggled.connect(self.set_paused)
         self.third_button.toggled.connect(self.set_third_person)
         self.scores_button.toggled.connect(self.set_scores_visible)
+        self.hud_button.toggled.connect(self.set_hud_visible)
         self.restart_button.clicked.connect(self.restart_demo)
         self.stop_button.clicked.connect(self.stop_openmohaa)
         self.screenshot_button.clicked.connect(lambda: self._send(self.controller.screenshot))
@@ -408,6 +420,7 @@ class MainWindow(QMainWindow):
         self.select_region_button.clicked.connect(self.select_recording_region)
         self.start_video_button.clicked.connect(self.start_video_recording)
         self.stop_video_button.clicked.connect(self.stop_video_recording)
+        self.qconsole_button.clicked.connect(self.open_qconsole_log)
 
     def launch_demo(self) -> None:
         self._save_settings()
@@ -446,7 +459,9 @@ class MainWindow(QMainWindow):
 
     def _launch_succeeded(self, prepared) -> None:
         self._set_status("Running")
+        self._qconsole_log_path = prepared.qconsole_log_path
         self.append_log(f"Prepared homepath: {prepared.homepath}")
+        self.append_log(f"Client qconsole log: {prepared.qconsole_log_path}")
         self._reset_demo_clock()
         self.play_pause_button.blockSignals(True)
         self.play_pause_button.setChecked(False)
@@ -458,6 +473,13 @@ class MainWindow(QMainWindow):
         self.scores_button.blockSignals(True)
         self.scores_button.setChecked(False)
         self.scores_button.blockSignals(False)
+        self.hud_button.blockSignals(True)
+        self.hud_button.setChecked(True)
+        self.hud_button.blockSignals(False)
+        self._hud_enabled = True
+        self._hud_status_line = ""
+        self._last_hud_push = 0.0
+        self._hud_error_logged = False
         self._set_setup_visible(False)
         self._set_log_visible(False)
         self._set_controls_enabled(True)
@@ -474,6 +496,9 @@ class MainWindow(QMainWindow):
             self._shrink_to_minimal()
         self._arrange_attempts = 0
         QTimer.singleShot(600, self._arrange_windows)
+        # HUD overlay is on by default; attach it now that the pipe is live.
+        self._send(lambda: self.controller.set_hud_enabled(True))
+        self._push_hud_update(force=True)
 
     def _launch_failed(self, message: str) -> None:
         self._set_status("Launch failed")
@@ -493,6 +518,7 @@ class MainWindow(QMainWindow):
             self.play_pause_button,
             self.third_button,
             self.scores_button,
+            self.hud_button,
             self.restart_button,
             self.stop_button,
             self.screenshot_button,
@@ -502,6 +528,7 @@ class MainWindow(QMainWindow):
             self.stop_video_button,
             self.video_name_edit,
             self.select_region_button,
+            self.qconsole_button,
             *self.speed_buttons,
             *self.rewind_buttons,
         ]:
@@ -515,6 +542,7 @@ class MainWindow(QMainWindow):
     def _drain_output(self) -> None:
         if self._demo_clock_active:
             self._refresh_demo_timestamp()
+            self._push_hud_update()
         self._refresh_video_recording_status()
         for line in self.controller.read_output_lines():
             self.append_log(line)
@@ -817,6 +845,7 @@ class MainWindow(QMainWindow):
         self.play_pause_button.setText("Play" if paused else "Pause")
         self._send(self.controller.pause if paused else lambda: self.controller.play(self._demo_speed))
         self._demo_clock_mark = time.monotonic()
+        self._push_hud_update(force=True)
 
     def set_speed(self, speed: float) -> None:
         self._sync_demo_clock()
@@ -829,20 +858,53 @@ class MainWindow(QMainWindow):
             self.play_pause_button.blockSignals(False)
         self._send(lambda: self.controller.set_speed(speed))
         self._demo_clock_mark = time.monotonic()
+        self._push_hud_update(force=True)
 
     def set_third_person(self, enabled: bool) -> None:
         self._send(lambda: self.controller.set_third_person(enabled))
+        self._push_hud_update(force=True)
 
     def set_scores_visible(self, visible: bool) -> None:
         self._send(self.controller.show_scores if visible else self.controller.hide_scores)
 
+    def set_hud_visible(self, visible: bool) -> None:
+        self._hud_enabled = visible
+        self._send(lambda: self.controller.set_hud_enabled(visible))
+        self._push_hud_update(force=True)
+
     def restart_demo(self) -> None:
         self._send(self.controller.restart_demo)
         self._reset_demo_clock()
+        self._hud_status_line = ""
+        self._push_hud_update(force=True)
 
     def stop_openmohaa(self) -> None:
         self._save_positions()
         self._send(self.controller.quit)
+
+    def open_qconsole_log(self) -> None:
+        path = self._qconsole_log_path or (self.controller.prepared.qconsole_log_path if self.controller.prepared else None)
+        if not path:
+            self._show_error("Qconsole path is not available until after launch.")
+            return
+
+        self.append_log(f"Client qconsole log: {path}")
+        QApplication.clipboard().setText(str(path))
+        if path.exists():
+            if platform.system() == "Darwin":
+                try:
+                    subprocess.run(["open", "-R", str(path)], check=False)
+                    return
+                except Exception as exc:  # noqa: BLE001 - best-effort platform integration
+                    self.append_log(f"Could not reveal qconsole with Finder: {exc}")
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
+            return
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(path.parent)))
+        self._show_error(
+            "qconsole.log has not been created yet. I copied the expected path to your clipboard and opened its folder."
+        )
 
     def select_recording_region(self) -> None:
         if self._region_selector:
@@ -887,6 +949,7 @@ class MainWindow(QMainWindow):
         self._recording_path = recording_path
         self._recording_started_at = time.monotonic()
         self._recording_pending = True
+        self._hud_status_line = "Recording"
         self.video_status_label.setText("Rec: starting...")
         self.video_status_label.setToolTip(str(recording_path))
         self.start_video_button.setEnabled(False)
@@ -896,6 +959,7 @@ class MainWindow(QMainWindow):
             f"screen {region.screen_index}, {region.width}x{region.height}+{region.x},{region.y}"
         )
         self.append_log(f"Recording target: {recording_path}")
+        self._push_hud_update(force=True)
 
     def stop_video_recording(self) -> None:
         self.recorder.stop()
@@ -907,6 +971,7 @@ class MainWindow(QMainWindow):
         else:
             self.video_status_label.setText("Rec: stopped, no file")
             self.video_status_label.setToolTip("")
+        self._push_hud_update(force=True)
 
     def _reset_video_recording_status(self) -> None:
         self._recording_path = None
@@ -933,6 +998,7 @@ class MainWindow(QMainWindow):
                 self.video_status_label.setToolTip("")
             if stderr:
                 self.append_log(f"FFmpeg stopped: {stderr}")
+            self._push_hud_update(force=True)
             return
         if self._recording_path.exists():
             size = self._recording_path.stat().st_size
@@ -947,6 +1013,8 @@ class MainWindow(QMainWindow):
         self.video_status_label.setText(f"Saved: {visible_path} ({size})")
         self.video_status_label.setToolTip(str(path))
         self.append_log(f"Video saved in: {path}")
+        self._hud_status_line = f"Saved {path.name}"
+        self._push_hud_update(force=True)
 
     def approx_seek(self) -> None:
         try:
@@ -979,6 +1047,8 @@ class MainWindow(QMainWindow):
         self._demo_paused = False
         self._demo_clock_mark = time.monotonic()
         self._set_status(f"Seeking {format_timestamp(target_seconds)}")
+        self._hud_status_line = f"Seeking {format_timestamp(target_seconds)}"
+        self._push_hud_update(force=True)
         self.seek_button.setEnabled(False)
         QTimer.singleShot(
             max(0, wait_ms),
@@ -1013,7 +1083,9 @@ class MainWindow(QMainWindow):
         self._demo_speed = restore_speed
         self._demo_paused = restore_paused
         self._demo_clock_mark = time.monotonic()
+        self._hud_status_line = ""
         self._refresh_demo_timestamp()
+        self._push_hud_update(force=True)
         self.seek_button.setEnabled(True)
         self._set_status("Running")
 
@@ -1037,6 +1109,41 @@ class MainWindow(QMainWindow):
     def _refresh_demo_timestamp(self) -> None:
         self._sync_demo_clock()
         self.timestamp_label.setText(f"Est. Time: {format_timestamp(self._demo_seconds)}")
+
+    def _push_hud_update(self, force: bool = False) -> None:
+        # The HUD is a client UI overlay (ui_addhud + linkcvar labels); we drive it
+        # by setting cvars over the pipe. Only push while it is enabled and running.
+        if not self._hud_enabled or not self.controller.is_running:
+            return
+        now = time.monotonic()
+        if not force and (now - self._last_hud_push) < 0.5:
+            return
+        self._last_hud_push = now
+        line1, line2, line3 = self._compose_hud_lines()
+        try:
+            self.controller.update_hud(line1, line2, line3)
+        except Exception as exc:  # noqa: BLE001 - GUI boundary, best-effort overlay
+            if not self._hud_error_logged:
+                self.append_log(f"HUD update failed: {exc}")
+                self._hud_error_logged = True
+
+    def _compose_hud_lines(self) -> tuple[str, str, str]:
+        speed_text = "PAUSED" if self._demo_paused else f"PLAY {self._demo_speed:g}x"
+        line1 = f"MoH Arena Review | {format_timestamp(self._demo_seconds)} | {speed_text}"
+        third = "3P ON" if self.third_button.isChecked() else "3P OFF"
+        xray = "X-RAY ON" if self.xray_checkbox.isChecked() else "X-RAY OFF"
+        line2 = f"{third} | {xray} | REC {self._recording_status_for_hud()}"
+        line3 = self._hud_status_line or ""
+        return line1, line2, line3
+
+    def _recording_status_for_hud(self) -> str:
+        if self._recording_pending:
+            if self._recording_path and self._recording_path.exists():
+                return self._format_bytes(self._recording_path.stat().st_size)
+            return "on"
+        if self._recording_path and self._recording_path.exists():
+            return "saved"
+        return "idle"
 
     def _format_offset_label(self, seconds: int) -> str:
         if seconds < 60:
