@@ -1,0 +1,39 @@
+# macOS / editor clutter
+.DS_Store
+*.swp
+*.swo
+
+# Python bytecode and tooling caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+env/
+.venv/
+venv/
+
+# Python packaging/build output
+*.egg-info/
+build/
+dist/
+*.egg
+
+# Local OpenMoHAA source/assets checkout or symlink
+openmohaa/
+
+# Keep only the x-ray pk3 used by the reviewer.
+custom_pk3/*
+!custom_pk3/
+!custom_pk3/zzz-Dark_Sniper_zztoggleskin_fix.pk3
+
+# Local logs and recordings
+*.log
+*.mp4
+*.avi
+*.mov

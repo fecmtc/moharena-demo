@@ -1,0 +1,4 @@
+# Runtime install for the local MoH Arena Demo Reviewer project.
+# Dependencies are declared in pyproject.toml; this keeps pip -r convenient
+# without duplicating version constraints.
+-e .
