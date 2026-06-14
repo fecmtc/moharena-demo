@@ -36,7 +36,7 @@ def build_config_text(xray_enabled: bool = False) -> str:
             f'bind F8 "demo {DEMO_COMMAND_NAME}"',
             'bind F9 "screenshot"',
             f'bind F10 "togglemenu {MENU_NAME}"',
-            'bind TAB "+scores"',
+            'bind F11 "+scores"',
             "",
         ]
     )
